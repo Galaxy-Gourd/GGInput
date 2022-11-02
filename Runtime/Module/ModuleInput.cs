@@ -78,6 +78,14 @@ namespace GG.Input
             }
         }
 
+        public void UnregisterGamePointerForOperator(int index)
+        {
+            if (_operatorPointers.ContainsKey(index))
+            {
+                _operatorPointers.Remove(index);
+            }
+        }
+
         public void SetSimulatedPointerVisible(bool visible, int index = 0)
         {
             if (_operatorPointers.ContainsKey(index))

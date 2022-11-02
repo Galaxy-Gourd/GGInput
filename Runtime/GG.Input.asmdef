@@ -3,7 +3,8 @@
     "rootNamespace": "GG.Input",
     "references": [
         "GUID:75469ad4d38634e559750d17036d5f7c",
-        "GUID:e57f8e1abdb30429da50e415bc34266c"
+        "GUID:e57f8e1abdb30429da50e415bc34266c",
+        "GUID:c59bf81e672ce4f12ae9a9d0f26d3144"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
