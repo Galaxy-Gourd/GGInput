@@ -4,6 +4,8 @@ using GG.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
+using UnityEngine.UI;
 
 namespace GG.Input
 {
@@ -32,13 +34,16 @@ namespace GG.Input
         private float _frameDelta;
         private string _controlScheme;
         private PointerEventData _eventData;
+        private List<RaycastResult> _raycastResults = new List<RaycastResult>();
         private List<GameObject> _hoveredObjs = new List<GameObject>();
         private readonly List<GameObject> _selectedObjs = new List<GameObject>();
         private PlayerInput _input;
         private Guid _deltaActionID;
         private Guid _scrollActionID;
         private DataInputValuesPointer _dataInput;
+        private DataPointerType _type;
         private readonly List<IInputReceiver<DataInputValuesPointer>> _receivers = new();
+        private Vector2 _prevEventPos;
 
         #endregion VARIABLES
 
@@ -48,16 +53,35 @@ namespace GG.Input
         private void Awake()
         {
             _eventData = new PointerEventData(_eventSystem);
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.Locked;
         }
 
-        public void Init(PlayerInput input)
+        public void Init(PlayerInput input, DataPointerType type)
         {
             input.onActionTriggered += OnActionTriggered;
             _deltaActionID = input.actions["Delta"].id;
             _scrollActionID = input.actions["Scroll"].id;
             _input = input;
+            
+            _type = type;
+            InitForType();
+        }
+
+        private void InitForType()
+        {
+            switch (_type)
+            {
+                case DataPointerType.Simulated:
+                    _pointerOverlay.gameObject.SetActive(true); 
+                    Cursor.visible = false;
+                    Cursor.lockState = CursorLockMode.Locked;
+                    break;
+                case DataPointerType.System:
+                    _pointerOverlay.gameObject.SetActive(false); 
+                    (_eventSystem.currentInputModule as InputSystemUIInputModule).AssignDefaultActions();
+                    Cursor.visible = true;
+                    Cursor.lockState = CursorLockMode.None;
+                    break;
+            }
         }
 
         private void OnEnable()
@@ -91,6 +115,9 @@ namespace GG.Input
 
         internal void UpdatePointer(float deltaTime)
         {
+            if (_type != DataPointerType.Simulated)
+                return;
+            
             // Move pointer
             Vector2 delta = _input.actions.FindAction(_deltaActionID).ReadValue<Vector2>();
             _dataInput.Scroll = _input.actions.FindAction(_scrollActionID).ReadValue<Vector2>();
@@ -100,29 +127,38 @@ namespace GG.Input
             _pointer.anchoredPosition = GatePointerPosition(_pointer.anchoredPosition + increase);
             Position = _pointer.position;
             _dataInput.Position = Position;
+            _eventData.delta = increase;
 
             // Move virtual mouse
             _eventData.position = _uiCamera.WorldToScreenPoint(_pointer.position);
-            List<RaycastResult> results = new List<RaycastResult>();
-            _eventSystem.RaycastAll(_eventData, results);
+            _raycastResults = new List<RaycastResult>();
+            _eventSystem.RaycastAll(_eventData, _raycastResults);
             
             // Update hovered objects
             List<GameObject> newHovered = new List<GameObject>();
-            foreach (RaycastResult obj in results)
+            foreach (RaycastResult obj in _raycastResults)
             {
                 newHovered.Add(obj.gameObject);
+                _eventData.pointerCurrentRaycast = obj;
             }
 
             ResolveHoveredObjects(newHovered);
 
-            foreach (GameObject obj in _hoveredObjs)
+            if (_prevEventPos != _eventData.position)
             {
-                Move(obj);
+                foreach (GameObject obj in _hoveredObjs)
+                {
+                    Move(obj);
+                }
             }
+            _prevEventPos = _eventData.position;
         }
 
         private void OnActionTriggered(InputAction.CallbackContext context)
         {
+            if (_type != DataPointerType.Simulated)
+                return;
+            
             switch (context.action.name)
             {
                 case "Select":
@@ -144,6 +180,12 @@ namespace GG.Input
             {
                 _dataInput.SelectStarted = true;
                 _dataInput.SelectIsPressed = true;
+                
+                foreach (RaycastResult obj in _raycastResults)
+                {
+                    _eventData.pointerPressRaycast = obj;
+                }
+                
                 ResolveActionPointerDown();
             }
             else if (action.phase == InputActionPhase.Canceled)
@@ -238,6 +280,7 @@ namespace GG.Input
         private void Enter(GameObject obj)
         {
             ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.pointerEnterHandler);
+            ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.initializePotentialDrag);
         }
 
         private void Exit(GameObject obj)
@@ -249,17 +292,23 @@ namespace GG.Input
         {
             ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.pointerDownHandler);
             ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.pointerClickHandler);
+            ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.beginDragHandler);
         }
 
         private void PointerUp(GameObject obj)
         {
             ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.pointerUpHandler);
             ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.deselectHandler);
+            ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.endDragHandler);
         }
 
         private void Move(GameObject obj)
         {
             ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.pointerMoveHandler);
+            if (_dataInput.SelectIsPressed)
+            {
+                ExecuteEvents.Execute(obj, _eventData, ExecuteEvents.dragHandler);
+            }
         }
 
         #endregion EVENTS
