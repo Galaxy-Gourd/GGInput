@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GG.Core;
-using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Utilities;
 
@@ -54,7 +53,7 @@ namespace GG.Input
         void ITickable.Tick(float delta)
         {
             // For each operator...
-            foreach (System.Collections.Generic.KeyValuePair<int, UISimulatedPointer> op in _operatorPointers)
+            foreach (KeyValuePair<int, UISimulatedPointer> op in _operatorPointers)
             {
                 op.Value.UpdatePointer(delta);
             }
