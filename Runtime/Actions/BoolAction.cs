@@ -58,7 +58,7 @@ namespace GG.Input
         bool previousValue;
         bool previousStarted;
         bool previousCanceled;
-
+        
         /// <summary>
         /// Initialize the values.
         /// </summary>

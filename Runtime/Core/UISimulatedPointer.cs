@@ -27,10 +27,11 @@ namespace GG.Input
         [SerializeField] private float _pointerSpeedGamepad;
         
         public TickGroup TickGroup => TickGroup.InputTransmission;
-        public Vector2 Position { get; private set; }
+        public Vector3 Position => _pointer.position;
+        public RectTransform Rect => _pointer;
+        public Vector2 Delta => _dataInput.Delta;
         public Camera Camera => _uiCamera;
 
-        private float _frameDelta;
         private string _controlScheme;
         private PointerEventData _eventData;
         private List<RaycastResult> _raycastResults = new List<RaycastResult>();
@@ -80,6 +81,11 @@ namespace GG.Input
                     Cursor.visible = true;
                     Cursor.lockState = CursorLockMode.None;
                     break;
+                case DataPointerType.None:
+                    _pointerOverlay.gameObject.SetActive(false); 
+                    Cursor.visible = false;
+                    Cursor.lockState = CursorLockMode.Locked;
+                    break;
             }
         }
 
@@ -102,9 +108,22 @@ namespace GG.Input
 
         #region API
 
-        internal void SetPointerVisible(bool visible)
+        public void SetPointerVisible(bool visible)
         {
-            
+            if (!visible)
+            {
+                _type = DataPointerType.None;
+                _pointerOverlay.gameObject.SetActive(false); 
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
+            else
+            {
+                _type = DataPointerType.Simulated;
+                _pointerOverlay.gameObject.SetActive(true); 
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
         }
 
         #endregion
@@ -124,14 +143,23 @@ namespace GG.Input
             Vector2 increase = speed * delta;
             _dataInput.Delta = increase;
             _pointer.anchoredPosition = GatePointerPosition(_pointer.anchoredPosition + increase);
-            Position = _pointer.position;
-            _dataInput.Position = Position;
+            _dataInput.Position = _pointer.position;
             _eventData.delta = increase;
 
             // Move virtual mouse
             _eventData.position = _uiCamera.WorldToScreenPoint(_pointer.position);
             _raycastResults = new List<RaycastResult>();
             _eventSystem.RaycastAll(_eventData, _raycastResults);
+            
+            // Debug
+            // Debug.Log("P:  |  " + Position);
+            // Debug.Log("A:  |  " + AnchoredPosition);
+            //Debug.Log("P -> V  |  " + _uiCamera.WorldToScreenPoint(Position));
+            // Debug.Log("P -> S  |  " + _uiCamera.WorldToScreenPoint(Position));
+            //Debug.Log("A -> V  |  " + _uiCamera.WorldToViewportPoint(AnchoredPosition));
+            // Debug.Log("A -> S  |  " + _uiCamera.WorldToScreenPoint(AnchoredPosition));
+            
+            
             
             // Update hovered objects
             List<GameObject> newHovered = new List<GameObject>();
@@ -237,7 +265,6 @@ namespace GG.Input
 
         private void ResolveHoveredObjects(List<GameObject> objs)
         {
-            // Objects that were not in the previous hovered list have been entere
             foreach (GameObject obj in objs)
             {
                 if (!_hoveredObjs.Contains(obj))
@@ -259,7 +286,7 @@ namespace GG.Input
 
         private void ResolveActionPointerDown()
         {
-            foreach (GameObject obj in _hoveredObjs)
+            foreach (GameObject obj in _hoveredObjs) 
             {
                 PointerDown(obj);
                 _selectedObjs.Add(obj);
@@ -363,6 +390,11 @@ namespace GG.Input
         public Vector2 GetPointerPosForViewportRaycast()
         {
             return _uiCamera.WorldToViewportPoint(_pointer.position);
+        }
+        
+        public Vector3 GetPointerPosForScreen()
+        {
+            return _uiCamera.WorldToScreenPoint(_pointer.position);
         }
 
         #endregion UTILITY

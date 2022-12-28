@@ -37,13 +37,13 @@ namespace GG.Input
             _input.onControlsChanged += OnControlsChanged;
         }
 
-        private void OnEnable()
+        protected virtual void OnEnable()
         {
             _actionMap?.Enable();
             TickRouter.Register(this);
         }
 
-        private void OnDisable()
+        protected virtual void OnDisable()
         {
             TickRouter.Unregister(this);
             if (!_input)
