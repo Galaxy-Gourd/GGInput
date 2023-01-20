@@ -30,6 +30,7 @@ namespace GG.Input
         public TickGroup TickGroup => TickGroup.InputTransmission;
         public Vector2 Position { get; private set; }
         public Camera Camera => _uiCamera;
+        public List<GameObject> HoveredObjects => _hoveredObjs;
 
         private float _frameDelta;
         private string _controlScheme;
@@ -77,7 +78,8 @@ namespace GG.Input
                     break;
                 case DataPointerType.System:
                     _pointerOverlay.gameObject.SetActive(false); 
-                    (_eventSystem.currentInputModule as InputSystemUIInputModule).AssignDefaultActions();
+                    if ((_eventSystem.currentInputModule as InputSystemUIInputModule) != null)
+                        (_eventSystem.currentInputModule as InputSystemUIInputModule).AssignDefaultActions();
                     Cursor.visible = true;
                     Cursor.lockState = CursorLockMode.None;
                     break;
