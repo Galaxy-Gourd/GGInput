@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using GG.Core;
-using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Utilities;
 
@@ -14,6 +13,7 @@ namespace GG.Input
         
         public TickGroup TickGroup => TickGroup.InputTransmission;
         public Action<InputControl> OnAnyButtonPressed;
+        public Action<InputDevice, InputDeviceChange> OnInputDeviceChanged;
 
         private Mouse _systemMouse;
         private InputRouter _router;
@@ -33,6 +33,7 @@ namespace GG.Input
             TickRouter.Register(_router);
 
             _buttonPressListener = InputSystem.onAnyButtonPress.Call(DoAnyButtonPressed);
+            InputSystem.onDeviceChange += DoInputDeviceChanged;
 
             yield return null;
         }
@@ -46,6 +47,11 @@ namespace GG.Input
             OnAnyButtonPressed?.Invoke(control);
         }
         
+        private void DoInputDeviceChanged(InputDevice device, InputDeviceChange change)
+        {
+            OnInputDeviceChanged?.Invoke(device, change);
+        }
+
         #endregion LOAD
 
 
@@ -54,7 +60,7 @@ namespace GG.Input
         void ITickable.Tick(float delta)
         {
             // For each operator...
-            foreach (System.Collections.Generic.KeyValuePair<int, UISimulatedPointer> op in _operatorPointers)
+            foreach (KeyValuePair<int, UISimulatedPointer> op in _operatorPointers)
             {
                 op.Value.UpdatePointer(delta);
             }
@@ -86,14 +92,6 @@ namespace GG.Input
             }
         }
 
-        public void SetSimulatedPointerVisible(bool visible, int index = 0)
-        {
-            if (_operatorPointers.ContainsKey(index))
-            {
-                _operatorPointers[index].SetPointerVisible(visible);
-            }
-        }
-
         public UISimulatedPointer GetPointerForOperator(int index = 0)
         {
             return !_operatorPointers.ContainsKey(index) ? null : _operatorPointers[index];
@@ -109,6 +107,7 @@ namespace GG.Input
             base.OnModuleDestroy();
 
             _buttonPressListener?.Dispose();
+            InputSystem.onDeviceChange -= OnInputDeviceChanged;
             TickRouter.Unregister(this);
             if (_router != null)
             {
