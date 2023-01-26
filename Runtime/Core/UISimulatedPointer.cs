@@ -31,6 +31,7 @@ namespace GG.Input
         public RectTransform Rect => _pointer;
         public Vector2 Delta => _dataInput.Delta;
         public Camera Camera => _uiCamera;
+        public List<GameObject> HoveredObjects => _hoveredObjs;
 
         private string _controlScheme;
         private PointerEventData _eventData;
@@ -77,7 +78,8 @@ namespace GG.Input
                     break;
                 case DataPointerType.System:
                     _pointerOverlay.gameObject.SetActive(false); 
-                    (_eventSystem.currentInputModule as InputSystemUIInputModule).AssignDefaultActions();
+                    if ((_eventSystem.currentInputModule as InputSystemUIInputModule) != null)
+                        (_eventSystem.currentInputModule as InputSystemUIInputModule).AssignDefaultActions();
                     Cursor.visible = true;
                     Cursor.lockState = CursorLockMode.None;
                     break;
