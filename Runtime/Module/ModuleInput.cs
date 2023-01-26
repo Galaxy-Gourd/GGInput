@@ -107,7 +107,10 @@ namespace GG.Input
             base.OnModuleDestroy();
 
             _buttonPressListener?.Dispose();
-            InputSystem.onDeviceChange -= OnInputDeviceChanged;
+            if (OnInputDeviceChanged != null)
+            {
+                InputSystem.onDeviceChange -= OnInputDeviceChanged;
+            }
             TickRouter.Unregister(this);
             if (_router != null)
             {
